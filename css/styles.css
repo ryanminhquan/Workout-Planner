@@ -1,26 +1,19 @@
 :root {
-  --bg: #0f1115;
-  --card: #191c23;
-  --card2: #222631;
-  --line: #2c313d;
-  --text: #eef0f4;
-  --muted: #9aa2b1;
-  --accent: #4f8cff;
+  /* Night mode (always on) */
+  --bg: #07080b;
+  --card: #111319;
+  --card2: #1a1d25;
+  --line: #242833;
+  --text: #e8eaef;
+  --muted: #8b93a3;
+  --accent: #5b8def;
   --accent-ink: #fff;
-  --good: #2fbf71;
-  --warn: #f0a531;
-  --bad: #ef5a5a;
+  --good: #27a863;
+  --warn: #e39a2a;
+  --bad: #e25555;
   --radius: 14px;
   --tabs-h: 64px;
   color-scheme: dark;
-}
-@media (prefers-color-scheme: light) {
-  :root {
-    --bg: #f3f4f7; --card: #fff; --card2: #eef0f4; --line: #dde1e8;
-    --text: #151821; --muted: #5d6576; --accent: #2563eb;
-    --good: #16a35a; --warn: #c27a0c; --bad: #d63d3d;
-    color-scheme: light;
-  }
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { margin: 0; background: var(--bg); color: var(--text); }
@@ -151,7 +144,7 @@ tr.done .check { background: var(--good); color: #fff; border-color: var(--good)
 
 .toast {
   position: fixed; left: 16px; right: 16px; top: calc(env(safe-area-inset-top) + 64px); z-index: 30;
-  max-width: 600px; margin: 0 auto; background: var(--text); color: var(--bg); padding: 12px 14px; border-radius: 12px; font-weight: 500;
+  max-width: 600px; margin: 0 auto; background: var(--card2); color: var(--text); border: 1px solid var(--line); box-shadow: 0 8px 24px rgba(0,0,0,.5); padding: 12px 14px; border-radius: 12px; font-weight: 500;
 }
 .edit-ex { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
 .edit-ex label { margin-top: 4px; }

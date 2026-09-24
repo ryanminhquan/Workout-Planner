@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches: [main, claude/workout-tracker-planner-4vdpoz]
   workflow_dispatch:
 
 permissions:

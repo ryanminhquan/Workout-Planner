@@ -1,5 +1,5 @@
 // Offline cache for the app shell + notification click handling.
-const CACHE = 'wp-v1';
+const CACHE = 'wp-v2';
 const ASSETS = [
   './', 'index.html', 'css/styles.css', 'js/app.js', 'js/logic.js', 'js/exercises.js', 'js/programs.js',
   'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png',
