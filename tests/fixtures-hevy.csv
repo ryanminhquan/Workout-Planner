@@ -1,0 +1,13 @@
+"title","start_time","end_time","description","exercise_title","superset_id","exercise_notes","set_index","set_type","weight_lbs","reps","distance_miles","duration_seconds","rpe"
+"Push","2 Sep 2026, 18:00","2 Sep 2026, 18:47","","Bench Press (Barbell)",,"Pause at chest",0,"warmup",95,10,,,
+"Push","2 Sep 2026, 18:00","2 Sep 2026, 18:47","","Bench Press (Barbell)",,"Pause at chest",1,"normal",135,10,,,
+"Push","2 Sep 2026, 18:00","2 Sep 2026, 18:47","","Bench Press (Barbell)",,"Pause at chest",2,"normal",135,9,,,
+"Push","2 Sep 2026, 18:00","2 Sep 2026, 18:47","","Bench Press (Barbell)",,"Pause at chest",3,"normal",135,8,,,
+"Push","2 Sep 2026, 18:00","2 Sep 2026, 18:47","","Lateral Raise (Dumbbell)",,,0,"normal",20,15,,,
+"Push","2 Sep 2026, 18:00","2 Sep 2026, 18:47","","Lateral Raise (Dumbbell)",,,1,"normal",20,14,,,
+"Push","9 Sep 2026, 18:05","9 Sep 2026, 18:50","","Bench Press (Barbell)",,,0,"normal",135,12,,,
+"Push","9 Sep 2026, 18:05","9 Sep 2026, 18:50","","Bench Press (Barbell)",,,1,"normal",135,12,,,
+"Push","9 Sep 2026, 18:05","9 Sep 2026, 18:50","","Bench Press (Barbell)",,,2,"normal",135,12,,,
+"Legs, Heavy","4 Sep 2026, 07:30","4 Sep 2026, 08:15","","Squat (Barbell)",,,0,"normal",185,5,,,
+"Legs, Heavy","4 Sep 2026, 07:30","4 Sep 2026, 08:15","","Squat (Barbell)",,,1,"normal",185,5,,,
+"Legs, Heavy","4 Sep 2026, 07:30","4 Sep 2026, 08:15","","Plank",,,0,"normal",,,,60,
