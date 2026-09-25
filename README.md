@@ -15,6 +15,22 @@ A phone-first workout tracker and planner. No account, no server: it runs in the
 - **Night mode.** A dark theme is always on.
 - **Backup.** Download or restore a JSON backup from Settings.
 
+## Couch to 5K (running app)
+
+A separate app lives in [`run/`](run/) and can be installed on its own (open `…/Workout-Planner/run/` and add it to your home screen). It takes you from walking to running 30 minutes non-stop in 9 weeks.
+
+- **The classic plan.** 3 runs a week for 9 weeks. Every run starts with a 5-minute warm-up walk and ends with a 5-minute cool-down walk. Week 1 is 8 × (run 1:00, walk 1:30). Week 9 is 30 minutes non-stop. The **Plan** tab shows every run. Tap one to see its intervals, or to start there if you already run a bit.
+- **Interval display.** A full-screen card shows **RUN**, **WALK**, **WARM UP** or **COOL DOWN** in its own color, with a countdown ring, "Run 3 of 8", what's next, and a timeline bar of the whole workout. You get a voice cue, a tone and a vibration at every change, plus a 3-2-1 countdown beep. You can pause, go back or skip. The screen stays on while you run.
+- **Tell it how the run felt.** After each run, pick 😄 Easy, 🙂 Just right, 😮‍💨 Hard or 😣 Couldn't finish. You can tick 🩹 Something hurts and add notes. The next workout changes to match:
+  - Just right → next run in the plan.
+  - Easy twice in a row → skip the rest of the week.
+  - Hard → next run with walk breaks 30 s longer. Hard twice in a row → repeat that run, gentler.
+  - Couldn't finish → repeat the run with longer walk breaks. Twice on the same run → go back to the end of the previous week.
+  - Something hurts → 2 rest days, then a gentler repeat. If your notes mention pain, the app reminds you to tick the box.
+  - Long break → after 10+ days off, walk breaks are longer. After 21+ days, you go back a week.
+  - A long non-stop run is made gentler by adding a 90 s walk halfway through.
+- **History** keeps every run, how it felt, your notes and what changed. **Undo** fixes a mis-tap.
+
 ## Importing from Hevy
 
 1. In Hevy go to **Profile → ⚙️ Settings → Export & Import Data → Export Workouts**, then save the `.csv` file.
@@ -38,7 +54,7 @@ The app is static files, so it can be hosted anywhere. GitHub Pages is set up:
 
 ```sh
 npm start   # serves on http://localhost:8080
-npm test    # unit tests for import, progression and planning logic
+npm test    # unit tests for import, progression, planning and Couch to 5K logic
 ```
 
-Code layout: `js/logic.js` (import, progression, estimates — pure and tested), `js/exercises.js` (exercise library and alternatives), `js/programs.js` (starter programs), `js/app.js` (UI). Data is stored in `localStorage` on the device.
+Code layout: `js/logic.js` (import, progression, estimates — pure and tested), `js/exercises.js` (exercise library and alternatives), `js/programs.js` (starter programs), `js/app.js` (UI). Data is stored in `localStorage` on the device. The running app is `run/js/c25k.js` (plan + adaptation rules, tested) and `run/js/app.js` (UI).
