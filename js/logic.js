@@ -3,6 +3,7 @@ import { norm, isLowerBodyCompound, guessPattern } from './exercises.js';
 
 export const DEFAULT_SETTINGS = {
   restSec: 180,
+  warmupRestSec: 60,
   unit: 'lb',
   daysPerWeek: 3,
   targetMin: 45,
@@ -153,7 +154,8 @@ export function routinesFromHistory(workouts) {
       exercises: g.last.exercises.map((e) => {
         const ws = e.sets.filter((s) => s.type !== 'warmup');
         const [repMin, repMax] = deriveRepRange(median(ws.map((s) => s.reps)));
-        return { name: e.name, sets: Math.max(1, ws.length), repMin, repMax };
+        const wu = Math.min(3, e.sets.length - ws.length);
+        return { name: e.name, sets: Math.max(1, ws.length), repMin, repMax, ...(wu > 0 ? { warmup: { sets: wu } } : {}) };
       }),
     }))
     .sort((a, b) => b.timesDone - a.timesDone || b.lastDone.localeCompare(a.lastDone));
@@ -169,6 +171,8 @@ export function hevyApiRoutine(r) {
       const rr = ws.find((s) => s.rep_range)?.rep_range;
       const [repMin, repMax] = rr && rr.start ? [rr.start, rr.end || rr.start] : deriveRepRange(median(ws.map((s) => s.reps || 0)));
       const ex = { name: e.title, sets: Math.max(1, ws.length), repMin, repMax };
+      const wu = Math.min(3, (e.sets || []).length - ws.length);
+      if (wu > 0) ex.warmup = { sets: wu };
       if (e.rest_seconds) ex.rest = e.rest_seconds;
       if (e.notes) ex.notes = e.notes;
       return ex;
@@ -291,18 +295,40 @@ export function progressionAdvice(history, ex, unit = 'lb') {
 export const WORK_MIN_PER_SET = 0.75;
 export const WARMUP_MIN = 4;
 
-export function estimateMinutes(routine, restSec = 180) {
+export const warmupCount = (e) => Math.max(0, Math.min(3, +e?.warmup?.sets || 0));
+
+export function estimateMinutes(routine, restSec = 180, warmupRestSec = 60) {
   const exs = routine.exercises || [];
-  const sets = exs.reduce((a, e) => a + (+e.sets || 0), 0);
+  const sets = exs.reduce((a, e) => a + (+e.sets || 0) + warmupCount(e), 0);
   if (!sets) return 0;
   let rest = 0, remaining = sets;
   for (const e of exs) {
+    for (let i = 0; i < warmupCount(e); i++) {
+      remaining--;
+      if (remaining > 0) rest += warmupRestSec / 60;
+    }
     for (let i = 0; i < (+e.sets || 0); i++) {
       remaining--;
       if (remaining > 0) rest += (e.rest || restSec) / 60;
     }
   }
   return Math.round(WARMUP_MIN + sets * WORK_MIN_PER_SET + rest);
+}
+
+// Warm-up ramp toward the working weight: [{ pct, weight, reps }]
+const RAMPS = {
+  1: [[0.6, 8]],
+  2: [[0.5, 8], [0.75, 4]],
+  3: [[0.4, 10], [0.6, 5], [0.8, 3]],
+};
+export function warmupPlan(count, workWeight, unit = 'lb') {
+  const ramp = RAMPS[Math.max(0, Math.min(3, count))] || [];
+  const step = unit === 'kg' ? 2.5 : 5;
+  return ramp.map(([pct, reps]) => ({
+    pct: Math.round(pct * 100),
+    weight: workWeight > 0 ? Math.max(step, roundTo(workWeight * pct, step)) : 0,
+    reps,
+  }));
 }
 
 export function maxSetsFor(targetMin, restSec = 180) {

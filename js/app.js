@@ -1,6 +1,6 @@
 import {
   DEFAULT_SETTINGS, uid, parseHevyCSV, routinesFromHistory, hevyApiRoutine, hevyApiWorkout, mergeHistory,
-  workingSets, e1rm, exerciseHistory, progressionAdvice, setStr, estimateMinutes, maxSetsFor,
+  workingSets, e1rm, exerciseHistory, progressionAdvice, setStr, estimateMinutes, maxSetsFor, warmupCount, warmupPlan,
   startOfWeek, workoutsThisWeek, suggestNext, routineFocus,
 } from './logic.js';
 import { alternativesFor, searchLibrary, PATTERNS, EQUIPMENT, findExercise, norm } from './exercises.js';
@@ -14,6 +14,10 @@ const fmtDate = (iso, opts = { weekday: 'short', month: 'short', day: 'numeric' 
 const mmss = (ms) => {
   const t = Math.max(0, Math.ceil(ms / 1000));
   return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
+};
+const warmupOf = (activeEx) => {
+  const n = Math.min(3, activeEx.sets.filter((s) => s.type === 'warmup').length);
+  return n ? { warmup: { sets: n } } : {};
 };
 const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
 const toNum = (v) => (v === '' || v == null ? 0 : parseFloat(v) || 0);
@@ -84,8 +88,11 @@ function toast(msg, ms = 2600) {
 const routineById = (id) => S.routines.find((r) => r.id === id);
 const totalSets = (r) => r.exercises.reduce((a, e) => a + (+e.sets || 0), 0);
 
+const estMin = (r) => estimateMinutes(r, S.settings.restSec, S.settings.warmupRestSec);
+const restFor = (ex, set) => (set?.type === 'warmup' ? S.settings.warmupRestSec : ex.rest || S.settings.restSec);
+
 function estPill(r) {
-  const m = estimateMinutes(r, S.settings.restSec);
+  const m = estMin(r);
   const over = m > S.settings.targetMin + 5;
   return `<span class="pill ${over ? 'over' : ''}" id="est">~${m} min</span>`;
 }
@@ -170,7 +177,7 @@ VIEWS.today = () => {
   const others = S.routines.filter((r) => r !== next?.routine);
   if (others.length && !S.active) {
     body += `<h2>Other routines</h2>` + others.map((r) => `
-      <div class="card"><div class="row"><div class="grow"><b>${esc(r.name)}</b><div class="muted small">${plural(r.exercises.length, 'exercise')} · ~${estimateMinutes(r, S.settings.restSec)} min</div></div>
+      <div class="card"><div class="row"><div class="grow"><b>${esc(r.name)}</b><div class="muted small">${plural(r.exercises.length, 'exercise')} · ~${estMin(r)} min</div></div>
       <button class="sm" data-a="start" data-id="${r.id}">Start</button></div></div>`).join('');
   }
   if (!S.active) body += `<button class="block ghost" data-a="startEmpty" style="margin-top:8px">+ Start an empty workout</button>`;
@@ -186,10 +193,12 @@ VIEWS.workout = () => {
 
   a.exercises.forEach((ex, ei) => {
     const adv = ex.advice || {};
+    const workIdx = (si) => ex.sets.slice(0, si).filter((x) => x.type !== 'warmup').length;
+    const last = (s, si) => (s.type === 'warmup' ? (s.pct ? `${s.pct}%` : 'warm-up') : ex.prev?.[workIdx(si)] || '—');
     const rows = ex.sets.map((s, si) => `
       <tr id="set-${ei}-${si}" class="${s.done ? 'done' : ''} ${s.type === 'warmup' ? 'warmup' : ''}">
         <td class="n" data-a="cycleType" data-ei="${ei}" data-si="${si}" title="Tap to mark warm-up">${s.type === 'warmup' ? 'W' : ex.sets.slice(0, si + 1).filter((x) => x.type !== 'warmup').length}</td>
-        <td class="prev">${esc(ex.prev?.[si] || '—')}</td>
+        <td class="prev">${esc(last(s, si))}</td>
         <td><input data-f="w" data-ei="${ei}" data-si="${si}" inputmode="decimal" type="text" value="${esc(s.weight)}" placeholder="${U_}" aria-label="weight"></td>
         <td><input data-f="r" data-ei="${ei}" data-si="${si}" inputmode="numeric" type="text" pattern="[0-9]*" value="${esc(s.reps)}" placeholder="${ex.repMin}–${ex.repMax}" aria-label="reps"></td>
         <td><button class="check" data-a="setDone" data-ei="${ei}" data-si="${si}" aria-label="complete set">✓</button></td>
@@ -201,7 +210,7 @@ VIEWS.workout = () => {
       <div class="ex-head"><h3>${esc(ex.name)}</h3>${statusPill(adv)}
         <button class="sm" data-a="swap" data-ctx="w" data-ei="${ei}" aria-label="swap exercise">⇄ Swap</button>
         <button class="sm ghost" data-a="exMenu" data-ei="${ei}" aria-label="more">⋯</button></div>
-      <div class="muted small">Target ${ex.sets.filter((s) => s.type !== 'warmup').length} × ${ex.repMin}–${ex.repMax} reps · rest ${mmss((ex.rest || S.settings.restSec) * 1000)}</div>
+      <div class="muted small">${ex.sets.some((s) => s.type === 'warmup') ? `${ex.sets.filter((s) => s.type === 'warmup').length} warm-up + ` : ''}${ex.sets.filter((s) => s.type !== 'warmup').length} × ${ex.repMin}–${ex.repMax} reps · rest ${mmss((ex.rest || S.settings.restSec) * 1000)}</div>
       ${adv.message ? `<div class="advice ${adv.status}">${esc(adv.message)} ${advBtn}</div>` : ''}
       ${ex.notes ? `<p class="muted small">📝 ${esc(ex.notes)}</p>` : ''}
       <table class="sets"><thead><tr><th>Set</th><th>Last</th><th>${U_}</th><th>Reps</th><th></th></tr></thead><tbody>${rows}</tbody></table>
@@ -223,7 +232,7 @@ function projStr() {
   if (!S.active) return '';
   const min = (Date.now() - new Date(S.active.startedAt)) / 60000;
   let left = 0;
-  for (const e of S.active.exercises) for (const s of e.sets) if (!s.done) left += 0.75 + (e.rest || S.settings.restSec) / 60;
+  for (const e of S.active.exercises) for (const s of e.sets) if (!s.done) left += 0.75 + restFor(e, s) / 60;
   const total = Math.round(min + left);
   const over = total > S.settings.targetMin + 5;
   return `Projected ${total} min${over ? ` — over your ${S.settings.targetMin} min target; consider dropping a set` : ''}`;
@@ -268,12 +277,18 @@ VIEWS.edit = (id) => {
         <div><label>Max reps</label><input data-f="re" data-k="repMax" data-ei="${i}" inputmode="numeric" value="${e.repMax}"></div>
       </div>
       <label>Rest (seconds, blank = default ${S.settings.restSec})</label><input data-f="re" data-k="rest" data-ei="${i}" inputmode="numeric" value="${e.rest || ''}">
+      <div class="warmup-box">
+        <label class="chk"><input type="checkbox" data-f="wu" data-ei="${i}" ${warmupCount(e) ? 'checked' : ''}> Warm-up sets</label>
+        ${warmupCount(e) ? `<div class="row"><select data-f="wuN" data-ei="${i}" class="grow">
+          ${[1, 2, 3].map((n) => `<option value="${n}" ${warmupCount(e) === n ? 'selected' : ''}>${plural(n, 'warm-up set')}</option>`).join('')}</select></div>
+          <p class="muted small">${warmupPlan(warmupCount(e), 100).map((p) => `${p.pct}% × ${p.reps}`).join(' → ')} of your working weight · ${mmss(S.settings.warmupRestSec * 1000)} rest</p>` : ''}
+      </div>
       <div class="row" style="margin-top:8px"><button class="sm" data-a="moveEx" data-ei="${i}" data-d="-1" ${i === 0 ? 'disabled' : ''}>↑</button>
       <button class="sm" data-a="moveEx" data-ei="${i}" data-d="1" ${i === r.exercises.length - 1 ? 'disabled' : ''}>↓</button>
       <span class="grow"></span><button class="sm danger" data-a="rmRoutineEx" data-ei="${i}">Remove</button></div>
     </div>`).join('');
   const body = `<label>Routine name</label><input data-f="rname" value="${esc(r.name)}">
-    <div class="row between" style="margin-top:10px"><span class="muted small">${plural(r.exercises.length, 'exercise')} · <span id="sets">${totalSets(r)}</span> sets</span>${estPill(r)}</div>
+    <div class="row between" style="margin-top:10px"><span class="muted small">${plural(r.exercises.length, 'exercise')} · <span id="sets">${totalSets(r)}</span> working sets</span>${estPill(r)}</div>
     ${exs}
     <button class="block" data-a="addEx" data-ctx="r">+ Add exercise</button>
     <div class="stack" style="margin-top:14px"><button class="primary block" data-a="start" data-id="${r.id}">Start this workout</button>
@@ -337,6 +352,8 @@ VIEWS.more = () => {
   const body = `<div class="card"><h3>Workout</h3>
     <label>Rest between sets</label><select data-f="set" data-k="restSec">
       ${[60, 90, 120, 150, 180, 210, 240, 300].map((v) => `<option value="${v}" ${s.restSec === v ? 'selected' : ''}>${mmss(v * 1000)}</option>`).join('')}</select>
+    <label>Rest after warm-up sets</label><select data-f="set" data-k="warmupRestSec">
+      ${[30, 45, 60, 90, 120].map((v) => `<option value="${v}" ${s.warmupRestSec === v ? 'selected' : ''}>${mmss(v * 1000)}</option>`).join('')}</select>
     <label>Session length target (minutes)</label><input data-f="set" data-k="targetMin" inputmode="numeric" value="${s.targetMin}">
     <label>Units</label><select data-f="set" data-k="unit"><option value="lb" ${s.unit === 'lb' ? 'selected' : ''}>lb</option><option value="kg" ${s.unit === 'kg' ? 'selected' : ''}>kg</option></select>
     <label class="chk"><input type="checkbox" data-f="set" data-k="sound" ${s.sound ? 'checked' : ''}> Beep when rest is over</label>
@@ -369,7 +386,7 @@ VIEWS.import = () => {
       <label class="chk"><input type="checkbox" data-f="impHist" ${importState.withHistory ? 'checked' : ''}> Import workout history (used for progress tracking)</label>
       <h2>Create routines from</h2>
       ${candidates.map((c) => `<label class="chk"><input type="checkbox" data-f="impSel" data-id="${c.id}" ${selected.has(c.id) ? 'checked' : ''}>
-        <span class="grow">${esc(c.name)}<br><span class="muted small">done ${c.timesDone}× · ${plural(c.exercises.length, 'exercise')} · ~${estimateMinutes(c, S.settings.restSec)} min</span></span></label>`).join('')}
+        <span class="grow">${esc(c.name)}<br><span class="muted small">done ${c.timesDone}× · ${plural(c.exercises.length, 'exercise')} · ~${estMin(c)} min</span></span></label>`).join('')}
       <button class="primary block" data-a="doImport" style="margin-top:10px">Import</button></div>`;
   }
 
@@ -464,6 +481,7 @@ function buildActiveEx(e) {
   const adv = progressionAdvice(S.history, e, U());
   const w = adv.status === 'up' ? adv.suggestedWeight ?? adv.lastWeight : adv.lastWeight;
   const n = Math.max(1, +e.sets || 3);
+  const warmups = warmupPlan(warmupCount(e), +w || 0, U()).map((p) => ({ weight: p.weight || '', reps: p.reps, pct: p.pct, done: false, type: 'warmup' }));
   return {
     name: e.name,
     repMin: +e.repMin || 8,
@@ -472,7 +490,7 @@ function buildActiveEx(e) {
     notes: e.notes,
     advice: { status: adv.status, message: adv.message, suggestedWeight: adv.suggestedWeight, lastWeight: adv.lastWeight },
     prev: (adv.lastSets || []).map(setStr),
-    sets: Array.from({ length: n }, () => ({ weight: w ? w : '', reps: '', done: false, type: 'normal' })),
+    sets: [...warmups, ...Array.from({ length: n }, () => ({ weight: w ? w : '', reps: '', done: false, type: 'normal' }))],
   };
 }
 
@@ -522,7 +540,7 @@ function completeSet(ei, si) {
   const nx = nextUp(ei, si);
   if (nx) {
     const newEx = nx.ei !== ei;
-    const rest = (newEx ? S.active.exercises[nx.ei].rest : ex.rest) || S.settings.restSec;
+    const rest = restFor(ex, s);
     startTimer(rest, { ...nx, newEx, label: newEx ? `Next exercise: ${S.active.exercises[nx.ei].name}` : setLabel(nx.ei, nx.si) });
   } else {
     S.timer = null; save('timer');
@@ -790,6 +808,8 @@ const A = {
   applyW: (el) => {
     const ex = S.active.exercises[+el.dataset.ei];
     ex.sets.forEach((s) => { if (!s.done && s.type !== 'warmup') s.weight = el.dataset.w; });
+    const plan = warmupPlan(ex.sets.filter((s) => s.type === 'warmup').length, toNum(el.dataset.w), U());
+    ex.sets.filter((s) => s.type === 'warmup').forEach((s, k) => { if (!s.done) s.weight = plan[k].weight || ''; });
     save('active'); render();
   },
   exMenu: (el) => openSheet({ type: 'exMenu', ei: +el.dataset.ei }),
@@ -829,7 +849,8 @@ const A = {
     const name = el.dataset.name;
     if (sheet.ctx === 'w') {
       const old = S.active.exercises[sheet.ei];
-      const fresh = buildActiveEx({ name, sets: old.sets.length, repMin: old.repMin, repMax: old.repMax, rest: old.rest });
+      const wu = old.sets.filter((x) => x.type === 'warmup').length;
+      const fresh = buildActiveEx({ name, sets: old.sets.length - wu, repMin: old.repMin, repMax: old.repMax, rest: old.rest, ...(wu ? { warmup: { sets: wu } } : {}) });
       fresh.sets = old.sets.map((s, i) => (s.done ? s : fresh.sets[i] || { ...fresh.sets[0] }));
       S.active.exercises[sheet.ei] = fresh;
       save('active');
@@ -931,7 +952,7 @@ const A = {
   saveToRoutine: () => {
     const d = sheet.data, r = routineById(d.routineId);
     if (r) {
-      r.exercises = d.activeExercises.map((e) => ({ name: e.name, sets: e.sets.filter((s) => s.type !== 'warmup').length || 1, repMin: e.repMin, repMax: e.repMax, ...(e.rest ? { rest: e.rest } : {}), ...(e.notes ? { notes: e.notes } : {}) }));
+      r.exercises = d.activeExercises.map((e) => ({ name: e.name, sets: e.sets.filter((s) => s.type !== 'warmup').length || 1, repMin: e.repMin, repMax: e.repMax, ...(e.rest ? { rest: e.rest } : {}), ...(e.notes ? { notes: e.notes } : {}), ...warmupOf(e) }));
       save('routines');
       toast('Routine updated');
     }
@@ -968,14 +989,27 @@ document.addEventListener('change', (ev) => {
     // Carry a changed weight down to the remaining sets of that exercise.
     const ex = S.active.exercises[+el.dataset.ei], si = +el.dataset.si;
     const v = el.value.trim();
+    const setW = (i, w) => {
+      ex.sets[i].weight = w;
+      const inp = document.querySelector(`input[data-f="w"][data-ei="${el.dataset.ei}"][data-si="${i}"]`);
+      if (inp) inp.value = w;
+    };
     ex.sets.forEach((s, i) => {
-      if (i > si && !s.done && s.type === ex.sets[si].type) {
-        s.weight = v;
-        const inp = document.querySelector(`input[data-f="w"][data-ei="${el.dataset.ei}"][data-si="${i}"]`);
-        if (inp) inp.value = v;
-      }
+      if (i > si && !s.done && s.type === ex.sets[si].type) setW(i, v);
     });
+    // Changing the first working set's weight re-ramps the unfinished warm-ups.
+    if (ex.sets[si].type !== 'warmup' && ex.sets.findIndex((x) => x.type !== 'warmup') === si) {
+      const wus = ex.sets.map((x, i) => [x, i]).filter(([x]) => x.type === 'warmup');
+      const plan = warmupPlan(wus.length, toNum(v), U());
+      wus.forEach(([x, i], k) => { if (!x.done && plan[k]) setW(i, plan[k].weight || ''); });
+    }
     save('active');
+  } else if (f === 'wu' || f === 'wuN') {
+    const e = routineById(param).exercises[+el.dataset.ei];
+    const n = f === 'wu' ? (el.checked ? 2 : 0) : +el.value;
+    if (n) e.warmup = { sets: n }; else delete e.warmup;
+    save('routines');
+    const y = window.scrollY; render(); window.scrollTo(0, y);
   } else if (f === 'sched') {
     if (el.value) S.schedule[el.dataset.dow] = el.value; else delete S.schedule[el.dataset.dow];
     save('schedule'); render();
@@ -995,7 +1029,7 @@ document.addEventListener('change', (ev) => {
   } else if (f === 'set') {
     const k = el.dataset.k;
     let v = el.type === 'checkbox' ? el.checked : el.value;
-    if (k === 'restSec' || k === 'targetMin') v = Math.max(1, parseInt(v, 10) || DEFAULT_SETTINGS[k]);
+    if (k === 'restSec' || k === 'targetMin' || k === 'warmupRestSec') v = Math.max(1, parseInt(v, 10) || DEFAULT_SETTINGS[k]);
     if (k === 'unit' && v !== S.settings.unit && S.history.length) toast('Unit changed. Existing weights are not converted.', 4000);
     S.settings[k] = v;
     save('settings');

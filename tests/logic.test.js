@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   parseCSV, parseHevyDate, parseHevyCSV, routinesFromHistory, progressionAdvice, estimateMinutes,
-  maxSetsFor, mergeHistory, suggestNext, hevyApiRoutine, deriveRepRange,
+  maxSetsFor, mergeHistory, suggestNext, hevyApiRoutine, deriveRepRange, warmupPlan, warmupCount,
 } from '../js/logic.js';
 import { alternativesFor, guessPattern } from '../js/exercises.js';
 import { PROGRAMS } from '../js/programs.js';
@@ -54,6 +54,9 @@ test('routinesFromHistory builds routines from the latest session', () => {
   assert.equal(rs[0].timesDone, 2);
   assert.equal(rs[0].exercises.length, 1); // latest Push only had bench
   assert.equal(rs[0].exercises[0].sets, 3);
+  assert.equal(rs[0].exercises[0].warmup, undefined); // latest Push had no warm-up
+  const legsR = rs.find((r) => r.name === 'Legs, Heavy');
+  assert.equal(legsR.exercises[0].warmup, undefined);
   assert.deepEqual([rs[0].exercises[0].repMin, rs[0].exercises[0].repMax], [8, 12]);
   const legs = rs.find((r) => r.name === 'Legs, Heavy');
   assert.deepEqual([legs.exercises[0].repMin, legs.exercises[0].repMax], [5, 8]);
@@ -129,7 +132,7 @@ test('suggestNext prefers schedule, then least recent', () => {
 
 test('hevyApiRoutine maps rep ranges', () => {
   const r = hevyApiRoutine({ title: 'Upper', exercises: [{ title: 'Pull Up', rest_seconds: 120, sets: [{ type: 'warmup', reps: 5 }, { type: 'normal', rep_range: { start: 6, end: 10 } }, { type: 'normal', rep_range: { start: 6, end: 10 } }] }] });
-  assert.deepEqual(r.exercises[0], { name: 'Pull Up', sets: 2, repMin: 6, repMax: 10, rest: 120 });
+  assert.deepEqual(r.exercises[0], { name: 'Pull Up', sets: 2, repMin: 6, repMax: 10, rest: 120, warmup: { sets: 1 } });
 });
 
 test('alternatives: same movement pattern, filterable by equipment', () => {
@@ -142,4 +145,26 @@ test('alternatives: same movement pattern, filterable by equipment', () => {
   assert.equal(guessPattern('Seated Hamstring Curl'), 'ham_iso');
   assert.equal(guessPattern('Some Custom Row Thing'), 'row');
   assert.equal(guessPattern('Zzz'), null);
+});
+
+test('warmupPlan ramps toward the working weight', () => {
+  assert.deepEqual(warmupPlan(2, 135, 'lb'), [{ pct: 50, weight: 70, reps: 8 }, { pct: 75, weight: 100, reps: 4 }]);
+  assert.deepEqual(warmupPlan(3, 100, 'kg').map((p) => p.weight), [40, 60, 80]);
+  assert.deepEqual(warmupPlan(1, 0).map((p) => p.weight), [0]); // no working weight yet
+  assert.deepEqual(warmupPlan(0, 135), []);
+  assert.equal(warmupCount({ warmup: { sets: 9 } }), 3);
+  assert.equal(warmupCount({}), 0);
+});
+
+test('warm-up sets add time with their own shorter rest', () => {
+  const r = { exercises: [{ name: 'Squat (Barbell)', sets: 3, repMin: 5, repMax: 8 }] };
+  const base = estimateMinutes(r, 180, 60);
+  const withWu = estimateMinutes({ exercises: [{ ...r.exercises[0], warmup: { sets: 2 } }] }, 180, 60);
+  assert.equal(withWu - base, Math.round(2 * 0.75 + 2 * 1)); // 2 sets + 2 × 60s rest
+});
+
+test('Hevy CSV warm-ups carry into routines', () => {
+  const ws = parseHevyCSV(csv);
+  const onlyFirst = routinesFromHistory([ws[0]]);
+  assert.deepEqual(onlyFirst[0].exercises[0].warmup, { sets: 1 });
 });

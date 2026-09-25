@@ -154,3 +154,7 @@ details summary { cursor: pointer; list-style: none; }
 details summary::-webkit-details-marker { display: none; }
 ol.steps { padding-left: 20px; margin: 6px 0; }
 ol.steps li { margin: 4px 0; }
+
+.warmup-box { margin-top: 10px; padding: 4px 10px; border-radius: 10px; background: var(--card2); }
+.warmup-box .chk { margin: 6px 0; }
+.warmup-box select { margin-bottom: 6px; }
