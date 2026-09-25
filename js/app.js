@@ -367,6 +367,8 @@ VIEWS.more = () => {
     <div class="stack"><button class="block" data-a="goImport">Import from Hevy</button><button class="block" data-a="exportData">Download backup</button>
     <label class="btn block" style="margin:0;color:var(--text);font-size:1rem">Restore backup<input type="file" accept=".json,application/json" data-f="restore" hidden></label>
     <button class="block danger" data-a="clearAll">Erase all data</button></div></div>
+    <div class="card"><h3>Running</h3><p class="muted small">Couch to 5K run/walk coach that adapts to how each run felt.</p>
+    <a class="btn block" href="run/">Open Couch to 5K →</a></div>
     <p class="muted small" style="text-align:center">Workout Planner · works offline</p>`;
   return { title: 'Settings', body };
 };
