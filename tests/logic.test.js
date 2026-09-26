@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   parseCSV, parseHevyDate, parseHevyCSV, routinesFromHistory, progressionAdvice, estimateMinutes,
-  maxSetsFor, mergeHistory, suggestNext, hevyApiRoutine, deriveRepRange, warmupPlan, warmupCount,
+  maxSetsFor, mergeHistory, suggestNext, hevyApiRoutine, deriveRepRange, warmupPlan, warmupCount, healthPayload, shortcutURL,
 } from '../js/logic.js';
 import { alternativesFor, guessPattern } from '../js/exercises.js';
 import { PROGRAMS } from '../js/programs.js';
@@ -167,4 +167,20 @@ test('Hevy CSV warm-ups carry into routines', () => {
   const ws = parseHevyCSV(csv);
   const onlyFirst = routinesFromHistory([ws[0]]);
   assert.deepEqual(onlyFirst[0].exercises[0].warmup, { sets: 1 });
+});
+
+test('healthPayload uses local start/end times and estimates calories', () => {
+  const start = new Date(2026, 8, 26, 18, 5); // local time
+  const entry = { name: 'Push', date: start.toISOString(), durationMin: 44 };
+  assert.deepEqual(healthPayload(entry, '', 'lb'), { name: 'Push', start: '2026-09-26 18:05', end: '2026-09-26 18:49', minutes: 44 });
+  assert.equal(healthPayload(entry, 180, 'lb').kcal, Math.round(5 * 180 * 0.45359237 * (44 / 60)));
+  assert.equal(healthPayload(entry, 80, 'kg').kcal, Math.round(5 * 80 * (44 / 60)));
+  assert.equal(healthPayload({ ...entry, durationMin: null }, '').minutes, 1);
+});
+
+test('shortcutURL encodes the shortcut name and JSON payload', () => {
+  const url = shortcutURL('Log Workout to Health', { name: 'Push & Pull', minutes: 45 });
+  assert.ok(url.startsWith('shortcuts://run-shortcut?name=Log%20Workout%20to%20Health&input=text&text='));
+  const text = decodeURIComponent(url.split('&text=')[1]);
+  assert.deepEqual(JSON.parse(text), { name: 'Push & Pull', minutes: 45 });
 });

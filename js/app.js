@@ -1,7 +1,7 @@
 import {
   DEFAULT_SETTINGS, uid, parseHevyCSV, routinesFromHistory, hevyApiRoutine, hevyApiWorkout, mergeHistory,
   workingSets, e1rm, exerciseHistory, progressionAdvice, setStr, estimateMinutes, maxSetsFor, warmupCount, warmupPlan,
-  startOfWeek, workoutsThisWeek, suggestNext, routineFocus,
+  startOfWeek, workoutsThisWeek, suggestNext, routineFocus, healthPayload, shortcutURL,
 } from './logic.js';
 import { alternativesFor, searchLibrary, PATTERNS, EQUIPMENT, findExercise, norm } from './exercises.js';
 import { PROGRAMS } from './programs.js';
@@ -87,6 +87,11 @@ function toast(msg, ms = 2600) {
 // ---------- Helpers ----------
 const routineById = (id) => S.routines.find((r) => r.id === id);
 const totalSets = (r) => r.exercises.reduce((a, e) => a + (+e.sets || 0), 0);
+
+function healthBtn(w, cls) {
+  if (!w) return '';
+  return `<button class="${cls}" data-a="healthLog" data-id="${w.id}">${w.healthLogged ? '✓ Sent to Apple Health · send again' : '❤️ Log to Apple Health'}</button>`;
+}
 
 const estMin = (r) => estimateMinutes(r, S.settings.restSec, S.settings.warmupRestSec);
 const restFor = (ex, set) => (set?.type === 'warmup' ? S.settings.warmupRestSec : ex.rest || S.settings.restSec);
@@ -324,7 +329,8 @@ VIEWS.history = (tab = 'workouts') => {
     return `<details class="card"><summary><div class="row between"><b>${esc(w.name)}</b><span class="muted small">${fmtDate(w.date)}</span></div>
       <div class="muted small">${w.durationMin ? w.durationMin + ' min · ' : ''}${plural(w.exercises.length, 'exercise')} · ${sets} sets${w.source === 'hevy' ? ' · from Hevy' : ''}</div></summary>
       ${w.exercises.map((e) => `<div class="kv"><span>${esc(e.name)}</span><span class="muted">${e.sets.filter((s) => s.type !== 'warmup').map(setStr).join(', ')}</span></div>`).join('')}
-      <button class="sm danger" data-a="delHist" data-id="${w.id}" style="margin-top:8px">Delete</button></details>`;
+      <div class="row" style="margin-top:8px">${S.settings.healthLog && w.source !== 'hevy' ? healthBtn(w, 'sm grow') : ''}
+      <button class="sm danger" data-a="delHist" data-id="${w.id}">Delete</button></div></details>`;
   }).join('');
   if (h.length > limit) body += `<button class="block" data-a="moreHist">Show more</button>`;
   return { title: 'History', body };
@@ -362,6 +368,25 @@ VIEWS.more = () => {
 
     <div class="card"><h3>Notifications</h3><p class="muted small">Status: <b>${perm}</b>. Notifications alert you when rest ends while the app is in the background. On iPhone, add this app to your Home Screen first (Share → Add to Home Screen).</p>
     <div class="row"><button class="grow" data-a="notifPerm">Enable</button><button class="grow" data-a="testAlarm">Test alert (5s)</button></div></div>
+
+    <div class="card"><h3>Apple Health</h3>
+    <p class="muted small">Logs finished workouts to Apple Health as <b>Traditional Strength Training</b> through an iPhone Shortcut, so they count toward your Activity rings. Heart rate isn't recorded; for that, also start a workout on your Apple Watch.</p>
+    <label class="chk"><input type="checkbox" data-f="set" data-k="healthLog" ${s.healthLog ? 'checked' : ''}> Show “Log to Apple Health” button</label>
+    ${s.healthLog ? `<label>Shortcut name (must match exactly)</label><input data-f="set" data-k="healthShortcut" value="${esc(s.healthShortcut)}" autocomplete="off">
+    <label>Your body weight (${s.unit}, optional — used to estimate calories)</label><input data-f="set" data-k="bodyWeight" inputmode="decimal" value="${esc(s.bodyWeight)}">
+    <details style="margin-top:10px"><summary><b>One-time Shortcut setup ▸</b></summary>
+    <ol class="steps small">
+      <li>Open the <b>Shortcuts</b> app → tap <b>+</b>. Name the shortcut <b>${esc(s.healthShortcut)}</b>.</li>
+      <li>Add <b>Get Dictionary from Input</b>. Tap its input and choose <b>Shortcut Input</b>.</li>
+      <li>Add <b>Get Dictionary Value</b> → get <b>Value</b> for key <b>start</b>.</li>
+      <li>Add <b>Get Dates from Input</b> using that <b>Dictionary Value</b>.</li>
+      <li>Add <b>Get Dictionary Value</b> → <b>Value</b> for key <b>minutes</b> in <b>Dictionary</b>.</li>
+      ${s.bodyWeight ? '<li>Add <b>Get Dictionary Value</b> → <b>Value</b> for key <b>kcal</b> in <b>Dictionary</b>.</li>' : ''}
+      <li>Add <b>Log Workout</b> (Health). Set <b>Type</b> to Traditional Strength Training, <b>Start Date</b> to <b>Dates</b>, <b>Duration</b> to the <b>minutes</b> value (in minutes)${s.bodyWeight ? ', and <b>Active Energy</b> to the <b>kcal</b> value' : ''}.</li>
+      <li>Run it once from this app and tap <b>Allow</b> when it asks for Health access.</li>
+    </ol>
+    <p class="muted small">If the shortcut says it has no input, open its settings (ⓘ) and allow it to receive <b>Text</b>.</p></details>` : ''}
+    </div>
 
     <div class="card"><h3>Data</h3><p class="muted small">Everything is stored on this device. Back up regularly.</p>
     <div class="stack"><button class="block" data-a="goImport">Import from Hevy</button><button class="block" data-a="exportData">Download backup</button>
@@ -455,10 +480,11 @@ function renderSheet() {
       <button class="block danger" data-a="rmActiveEx">Remove from this workout</button></div>`;
   } else if (sheet.type === 'summary') {
     const d = sheet.data;
-    html = `<h3>Workout saved 🎉</h3><p class="muted">${esc(d.name)} · ${d.minutes} min · ${d.sets} sets · ${Math.round(d.volume).toLocaleString()} ${U()} volume</p>
+    html = `<h3>Workout saved 🎉</h3><p class="muted">${esc(d.name)} · ${d.minutes} min · ${plural(d.sets, 'set')} · ${Math.round(d.volume).toLocaleString()} ${U()} volume</p>
       ${d.prs.length ? `<h2>Personal records</h2>${d.prs.map((p) => `<div class="advice up">🏆 ${esc(p.name)}: ${esc(p.set)}</div>`).join('')}` : ''}
       ${d.ups.length ? `<h2>Move up next time</h2>${d.ups.map((u) => `<div class="advice up"><b>${esc(u.name)}</b> — ${esc(u.message)}</div>`).join('')}` : ''}
       ${d.changed ? `<div class="card"><p class="small">You swapped or added exercises. Update the <b>${esc(d.routineName)}</b> routine to match?</p><button class="block" data-a="saveToRoutine">Update routine</button></div>` : ''}
+      ${S.settings.healthLog ? healthBtn(S.history.find((w) => w.id === d.id), 'block') : `<p class="muted small" style="margin-top:12px">Want workouts in Apple Health? Set it up in Settings → Apple Health.</p>`}
       <button class="primary block" data-a="closeSheet" style="margin-top:12px">Done</button>`;
   }
   el.innerHTML = `<div class="panel">${html}</div>`;
@@ -572,7 +598,7 @@ function finishWorkout() {
   const r = routineById(a.routineId);
   const changed = r && (r.exercises.length !== a.exercises.length || r.exercises.some((e, i) => norm(e.name) !== norm(a.exercises[i]?.name)));
   const summary = {
-    name: a.name, minutes, prs, ups, changed, routineName: r?.name, routineId: r?.id, activeExercises: a.exercises,
+    id: entry.id, name: a.name, minutes, prs, ups, changed, routineName: r?.name, routineId: r?.id, activeExercises: a.exercises,
     sets: exercises.reduce((n, e) => n + workingSets(e).length, 0),
     volume: exercises.reduce((v, e) => v + workingSets(e).reduce((x, s) => x + s.weight * s.reps, 0), 0),
   };
@@ -923,6 +949,15 @@ const A = {
     S.history = S.history.filter((w) => w.id !== el.dataset.id);
     save('history'); render();
   },
+  healthLog: (el) => {
+    const w = S.history.find((x) => x.id === el.dataset.id);
+    if (!w) return;
+    const url = shortcutURL(S.settings.healthShortcut || DEFAULT_SETTINGS.healthShortcut, healthPayload(w, S.settings.bodyWeight, U()));
+    w.healthLogged = true;
+    save('history');
+    el.textContent = '✓ Sent to Apple Health · send again';
+    location.href = url;
+  },
   doImport: () => doImport(),
   hevyApi: () => hevyApiImport(),
   notifPerm: async () => {
@@ -1034,6 +1069,8 @@ document.addEventListener('change', (ev) => {
     S.settings[k] = v;
     save('settings');
     if (k === 'keepAwake') v ? keepAwake() : releaseAwake();
+    if (k === 'healthShortcut' && !String(v).trim()) { S.settings[k] = DEFAULT_SETTINGS[k]; save('settings'); }
+    if (k === 'healthLog' || k === 'bodyWeight' || k === 'healthShortcut') { const y = window.scrollY; render(); window.scrollTo(0, y); }
   } else if (f === 'csv' && el.files[0]) {
     handleCSV(el.files[0]);
   } else if (f === 'impHist' && importState) {

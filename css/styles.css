@@ -57,7 +57,7 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
 button.good { background: var(--good); border-color: var(--good); color: #fff; font-weight: 600; }
 button.danger { color: var(--bad); }
 button.ghost { background: transparent; border-color: transparent; }
-button.block { width: 100%; }
+button.block, .btn.block { width: 100%; }
 button.sm { min-height: 34px; padding: 6px 10px; font-size: .9rem; border-radius: 10px; }
 button:disabled { opacity: .5; }
 

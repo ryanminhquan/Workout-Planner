@@ -10,6 +10,9 @@ export const DEFAULT_SETTINGS = {
   sound: true,
   vibrate: true,
   keepAwake: true,
+  healthLog: false,
+  healthShortcut: 'Log Workout to Health',
+  bodyWeight: '',
 };
 
 export const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
@@ -379,4 +382,29 @@ export function routineFocus(routine) {
     else if (p === 'core') groups.add('Core');
   }
   return [...groups];
+}
+
+// ---------- Apple Health (via the iOS Shortcuts app) ----------
+
+const pad = (n) => String(n).padStart(2, '0');
+const localStamp = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+
+// Rough strength-training burn: ~5 METs (kcal = MET × kg × hours).
+export const STRENGTH_MET = 5;
+
+export function healthPayload(entry, bodyWeight, unit = 'lb') {
+  const start = new Date(entry.date);
+  const minutes = Math.max(1, Math.round(entry.durationMin || 1));
+  const end = new Date(start.getTime() + minutes * 60000);
+  const out = { name: entry.name, start: localStamp(start), end: localStamp(end), minutes };
+  const bw = parseFloat(bodyWeight);
+  if (bw > 0) {
+    const kg = unit === 'kg' ? bw : bw * KG_PER_LB;
+    out.kcal = Math.round(STRENGTH_MET * kg * (minutes / 60));
+  }
+  return out;
+}
+
+export function shortcutURL(shortcutName, payload) {
+  return `shortcuts://run-shortcut?name=${encodeURIComponent(shortcutName)}&input=text&text=${encodeURIComponent(JSON.stringify(payload))}`;
 }
