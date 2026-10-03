@@ -377,15 +377,16 @@ VIEWS.more = () => {
     <details style="margin-top:10px"><summary><b>One-time Shortcut setup ▸</b></summary>
     <ol class="steps small">
       <li>Open the <b>Shortcuts</b> app → tap <b>+</b>. Name the shortcut <b>${esc(s.healthShortcut)}</b>.</li>
-      <li>Add <b>Get Dictionary from Input</b>. Tap its input and choose <b>Shortcut Input</b>.</li>
-      <li>Add <b>Get Dictionary Value</b> → get <b>Value</b> for key <b>start</b>.</li>
+      <li>In the top <b>Receive</b> block: tap the input types → <b>Clear</b> → turn on only <b>Text</b>. Tap <b>Nowhere</b> → turn on <b>Share Sheet</b>.</li>
+      <li>Add <b>Get Dictionary from Input</b>. Its input should be <b>Shortcut Input</b>.</li>
+      <li>Add <b>Get Dictionary Value</b> → <b>Value</b> for key <b>start</b> in <b>Dictionary</b>.</li>
       <li>Add <b>Get Dates from Input</b> using that <b>Dictionary Value</b>.</li>
-      <li>Add <b>Get Dictionary Value</b> → <b>Value</b> for key <b>minutes</b> in <b>Dictionary</b>.</li>
-      ${s.bodyWeight ? '<li>Add <b>Get Dictionary Value</b> → <b>Value</b> for key <b>kcal</b> in <b>Dictionary</b>.</li>' : ''}
-      <li>Add <b>Log Workout</b> (Health). Set <b>Type</b> to Traditional Strength Training, <b>Start Date</b> to <b>Dates</b>, <b>Duration</b> to the <b>minutes</b> value (in minutes)${s.bodyWeight ? ', and <b>Active Energy</b> to the <b>kcal</b> value' : ''}.</li>
-      <li>Run it once from this app and tap <b>Allow</b> when it asks for Health access.</li>
+      <li>Add <b>Get Dictionary Value</b> → <b>Value</b> for key <b>minutes</b>. ⚠️ Shortcuts fills in the wrong input here: tap it → <b>Select Variable</b> → tap the <b>Dictionary</b> from step 3.</li>
+      ${s.bodyWeight ? '<li>Add <b>Get Dictionary Value</b> → <b>Value</b> for key <b>kcal</b>. Same fix: tap its input → <b>Select Variable</b> → tap the <b>Dictionary</b> from step 3.</li>' : ''}
+      <li>Add <b>Log Workout</b> (Health), set it to <b>Traditional Strength Training</b>, then tap <b>›</b> to expand it. Using <b>Select Variable</b> each time, set <b>Start Date</b> → <b>Dates</b>, <b>Duration</b> → the <b>minutes</b> step's value (unit: minutes)${s.bodyWeight ? ', <b>Active Energy</b> → the <b>kcal</b> step\'s value' : ''}.</li>
+      <li>Back here, open a workout in History → <b>❤️ Log to Apple Health</b>, and tap <b>Allow</b> when it asks for Health access.</li>
     </ol>
-    <p class="muted small">If the shortcut says it has no input, open its settings (ⓘ) and allow it to receive <b>Text</b>.</p></details>` : ''}
+    <p class="muted small">Tip: several steps output “Dictionary Value”. Always use <b>Select Variable</b> and tap the exact step instead of picking from the suggestion bar.</p></details>` : ''}
     </div>
 
     <div class="card"><h3>Data</h3><p class="muted small">Everything is stored on this device. Back up regularly.</p>
