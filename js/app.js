@@ -386,7 +386,16 @@ VIEWS.more = () => {
       <li>Add <b>Log Workout</b> (Health), set it to <b>Traditional Strength Training</b>, then tap <b>›</b> to expand it. Using <b>Select Variable</b> each time, set <b>Start Date</b> → <b>Dates</b>, <b>Duration</b> → the <b>minutes</b> step's value (unit: minutes)${s.bodyWeight ? ', <b>Active Energy</b> → the <b>kcal</b> step\'s value' : ''}.</li>
       <li>Back here, open a workout in History → <b>❤️ Log to Apple Health</b>, and tap <b>Allow</b> when it asks for Health access.</li>
     </ol>
-    <p class="muted small">Tip: several steps output “Dictionary Value”. Always use <b>Select Variable</b> and tap the exact step instead of picking from the suggestion bar.</p></details>` : ''}
+    <p class="muted small">Tip: several steps output “Dictionary Value”. Always use <b>Select Variable</b> and tap the exact step instead of picking from the suggestion bar.</p></details>
+    <details style="margin-top:10px"><summary><b>Shortcut shows an error? Test it ▸</b></summary>
+    <ol class="steps small">
+      <li>Tap <b>Copy test data</b> below.</li>
+      <li>In Shortcuts, open the shortcut and add a <b>Text</b> action at the very top. Paste into it.</li>
+      <li>Tap <b>Get Dictionary from Input</b>'s input → <b>Select Variable</b> → tap that <b>Text</b>.</li>
+      <li>Tap ▶ in the editor. The step that fails turns red and shows the real error.</li>
+      <li>When it works, delete the Text action and set the input back to <b>Shortcut Input</b>.</li>
+    </ol>
+    <button class="block sm" data-a="copyHealthTest">Copy test data</button></details>` : ''}
     </div>
 
     <div class="card"><h3>Data</h3><p class="muted small">Everything is stored on this device. Back up regularly.</p>
@@ -951,6 +960,13 @@ const A = {
     if (!confirm('Delete this workout from history?')) return;
     S.history = S.history.filter((w) => w.id !== el.dataset.id);
     save('history'); render();
+  },
+  copyHealthTest: async () => {
+    const last = [...S.history].reverse().find((w) => w.source !== 'hevy')
+      || { name: 'Test workout', date: new Date(Date.now() - 45 * 60000).toISOString(), durationMin: 45 };
+    const text = JSON.stringify(healthPayload(last, S.settings.bodyWeight, U()));
+    try { await navigator.clipboard.writeText(text); toast('Copied: ' + text, 5000); }
+    catch { prompt('Copy this text:', text); }
   },
   healthLog: (el) => {
     const w = S.history.find((x) => x.id === el.dataset.id);
