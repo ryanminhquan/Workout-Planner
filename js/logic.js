@@ -12,6 +12,8 @@ export const DEFAULT_SETTINGS = {
   keepAwake: true,
   healthLog: false,
   healthShortcut: 'Log Workout to Health',
+  watchStart: false,
+  watchShortcut: 'Start Strength Workout',
   bodyWeight: '',
 };
 
@@ -403,6 +405,10 @@ export function healthPayload(entry, bodyWeight, unit = 'lb') {
     out.kcal = Math.round(STRENGTH_MET * kg * (minutes / 60));
   }
   return out;
+}
+
+export function shortcutRunURL(shortcutName) {
+  return `shortcuts://run-shortcut?name=${encodeURIComponent(shortcutName)}`;
 }
 
 export function shortcutURL(shortcutName, payload) {

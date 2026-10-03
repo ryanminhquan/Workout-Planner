@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   parseCSV, parseHevyDate, parseHevyCSV, routinesFromHistory, progressionAdvice, estimateMinutes,
-  maxSetsFor, mergeHistory, suggestNext, hevyApiRoutine, deriveRepRange, warmupPlan, warmupCount, healthPayload, shortcutURL,
+  maxSetsFor, mergeHistory, suggestNext, hevyApiRoutine, deriveRepRange, warmupPlan, warmupCount, healthPayload, shortcutURL, shortcutRunURL,
 } from '../js/logic.js';
 import { alternativesFor, guessPattern } from '../js/exercises.js';
 import { PROGRAMS } from '../js/programs.js';
@@ -183,4 +183,8 @@ test('shortcutURL encodes the shortcut name and JSON payload', () => {
   assert.ok(url.startsWith('shortcuts://run-shortcut?name=Log%20Workout%20to%20Health&input=text&text='));
   const text = decodeURIComponent(url.split('&text=')[1]);
   assert.deepEqual(JSON.parse(text), { name: 'Push & Pull', minutes: 45 });
+});
+
+test('shortcutRunURL runs a shortcut without input', () => {
+  assert.equal(shortcutRunURL('Start Strength Workout'), 'shortcuts://run-shortcut?name=Start%20Strength%20Workout');
 });

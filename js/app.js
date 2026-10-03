@@ -1,7 +1,7 @@
 import {
   DEFAULT_SETTINGS, uid, parseHevyCSV, routinesFromHistory, hevyApiRoutine, hevyApiWorkout, mergeHistory,
   workingSets, e1rm, exerciseHistory, progressionAdvice, setStr, estimateMinutes, maxSetsFor, warmupCount, warmupPlan,
-  startOfWeek, workoutsThisWeek, suggestNext, routineFocus, healthPayload, shortcutURL,
+  startOfWeek, workoutsThisWeek, suggestNext, routineFocus, healthPayload, shortcutURL, shortcutRunURL,
 } from './logic.js';
 import { alternativesFor, searchLibrary, PATTERNS, EQUIPMENT, findExercise, norm } from './exercises.js';
 import { PROGRAMS } from './programs.js';
@@ -369,6 +369,20 @@ VIEWS.more = () => {
     <div class="card"><h3>Notifications</h3><p class="muted small">Status: <b>${perm}</b>. Notifications alert you when rest ends while the app is in the background. On iPhone, add this app to your Home Screen first (Share → Add to Home Screen).</p>
     <div class="row"><button class="grow" data-a="notifPerm">Enable</button><button class="grow" data-a="testAlarm">Test alert (5s)</button></div></div>
 
+    <div class="card"><h3>Start watch workout automatically</h3>
+    <p class="muted small">When you tap <b>Start workout</b>, the app also runs an iPhone Shortcut that starts a <b>Traditional Strength Training</b> workout, so your rings fill. Shortcuts opens for a moment; tap <b>◀ Workouts</b> at the top-left to come back.</p>
+    <label class="chk"><input type="checkbox" data-f="set" data-k="watchStart" ${s.watchStart ? 'checked' : ''}> Run a shortcut when I start a workout</label>
+    ${s.watchStart ? `<label>Shortcut name (must match exactly)</label><input data-f="set" data-k="watchShortcut" value="${esc(s.watchShortcut)}" autocomplete="off">
+    <details style="margin-top:10px"><summary><b>One-time Shortcut setup ▸</b></summary>
+    <ol class="steps small">
+      <li>Open <b>Shortcuts</b> → tap <b>+</b>. Name it <b>${esc(s.watchShortcut)}</b>.</li>
+      <li>Add the <b>Start Workout</b> action and set the workout to <b>Traditional Strength Training</b>.</li>
+      <li>Tap <b>Test</b> below and check where the workout started — your <b>Apple Watch</b> or the iPhone <b>Fitness</b> app. End the test workout afterwards.</li>
+    </ol></details>
+    <button class="block sm" data-a="testWatchStart" style="margin-top:8px">Test (runs the shortcut only)</button>
+    <p class="muted small">You'll still end the workout on your watch. Don't also use “Log to Apple Health” for the same workout, or it will be logged twice.</p>` : ''}
+    </div>
+
     <div class="card"><h3>Apple Health</h3>
     <p class="muted small">Logs finished workouts to Apple Health as <b>Traditional Strength Training</b> through an iPhone Shortcut, so they show up in your Health and Fitness workout history. They <b>don't fill your Activity rings</b> (Apple only gives ring credit for what your watch measures), so to close rings, start a Traditional Strength Training workout on your Apple Watch instead — and skip this button for that workout to avoid a duplicate.</p>
     <label class="chk"><input type="checkbox" data-f="set" data-k="healthLog" ${s.healthLog ? 'checked' : ''}> Show “Log to Apple Health” button</label>
@@ -541,9 +555,14 @@ function startWorkout(r) {
   S.timer = null;
   save('active', 'timer');
   unlockAudio();
-  if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission();
   keepAwake();
   go('workout');
+  if (S.settings.watchStart) {
+    // Kick off the Apple Watch / Fitness workout via the user's Shortcut (leaves the app briefly).
+    location.href = shortcutRunURL(S.settings.watchShortcut || DEFAULT_SETTINGS.watchShortcut);
+  } else if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
 }
 
 function nextUp(ei, si) {
@@ -961,6 +980,7 @@ const A = {
     S.history = S.history.filter((w) => w.id !== el.dataset.id);
     save('history'); render();
   },
+  testWatchStart: () => { location.href = shortcutRunURL(S.settings.watchShortcut || DEFAULT_SETTINGS.watchShortcut); },
   copyHealthTest: async () => {
     const last = [...S.history].reverse().find((w) => w.source !== 'hevy')
       || { name: 'Test workout', date: new Date(Date.now() - 45 * 60000).toISOString(), durationMin: 45 };
@@ -1088,8 +1108,8 @@ document.addEventListener('change', (ev) => {
     S.settings[k] = v;
     save('settings');
     if (k === 'keepAwake') v ? keepAwake() : releaseAwake();
-    if (k === 'healthShortcut' && !String(v).trim()) { S.settings[k] = DEFAULT_SETTINGS[k]; save('settings'); }
-    if (k === 'healthLog' || k === 'bodyWeight' || k === 'healthShortcut') { const y = window.scrollY; render(); window.scrollTo(0, y); }
+    if ((k === 'healthShortcut' || k === 'watchShortcut') && !String(v).trim()) { S.settings[k] = DEFAULT_SETTINGS[k]; save('settings'); }
+    if (k === 'healthLog' || k === 'bodyWeight' || k === 'healthShortcut' || k === 'watchStart' || k === 'watchShortcut') { const y = window.scrollY; render(); window.scrollTo(0, y); }
   } else if (f === 'csv' && el.files[0]) {
     handleCSV(el.files[0]);
   } else if (f === 'impHist' && importState) {

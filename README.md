@@ -13,6 +13,7 @@ A phone-first workout tracker and planner. No account, no server: it runs in the
 - **45-minute sessions, 3–4 days a week.** Every routine shows an estimated duration. During a workout it projects your finish time and warns you if you'll go over your target. The weekly goal and schedule are in the Plan tab. Two starter programs are sized for about 45 minutes with 3-minute rests: 3-day Full Body and 4-day Upper/Lower.
 - **History.** See every workout, the progress of each exercise, estimated 1-rep max, and PRs on the finish screen.
 - **Apple Health.** Turn it on in Settings → Apple Health. The finish screen and History then show a **❤️ Log to Apple Health** button. It runs an iPhone Shortcut you create once, which logs the workout to Health as Traditional Strength Training so it shows up in your workout history. It doesn't fill Activity rings, because Apple only gives ring credit for what the watch measures; record on the watch for that. It includes estimated calories if you enter your body weight. Setup steps are in the app. The app can't reach your Apple Watch directly, so heart rate isn't recorded; for that, also start a workout on the watch.
+- **Start the watch workout automatically.** In Settings, turn on "Run a shortcut when I start a workout" and make a one-action Shortcut (**Start Workout → Traditional Strength Training**). After that, **Start workout** in the app also starts the workout from Shortcuts, which fills your rings.
 - **Night mode.** A dark theme is always on.
 - **Backup.** Download or restore a JSON backup from Settings.
 
