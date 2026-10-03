@@ -370,7 +370,7 @@ VIEWS.more = () => {
     <div class="row"><button class="grow" data-a="notifPerm">Enable</button><button class="grow" data-a="testAlarm">Test alert (5s)</button></div></div>
 
     <div class="card"><h3>Apple Health</h3>
-    <p class="muted small">Logs finished workouts to Apple Health as <b>Traditional Strength Training</b> through an iPhone Shortcut, so they count toward your Activity rings. Heart rate isn't recorded; for that, also start a workout on your Apple Watch.</p>
+    <p class="muted small">Logs finished workouts to Apple Health as <b>Traditional Strength Training</b> through an iPhone Shortcut, so they show up in your Health and Fitness workout history. They <b>don't fill your Activity rings</b> (Apple only gives ring credit for what your watch measures), so to close rings, start a Traditional Strength Training workout on your Apple Watch instead — and skip this button for that workout to avoid a duplicate.</p>
     <label class="chk"><input type="checkbox" data-f="set" data-k="healthLog" ${s.healthLog ? 'checked' : ''}> Show “Log to Apple Health” button</label>
     ${s.healthLog ? `<label>Shortcut name (must match exactly)</label><input data-f="set" data-k="healthShortcut" value="${esc(s.healthShortcut)}" autocomplete="off">
     <label>Your body weight (${s.unit}, optional — used to estimate calories)</label><input data-f="set" data-k="bodyWeight" inputmode="decimal" value="${esc(s.bodyWeight)}">
