@@ -383,7 +383,7 @@ VIEWS.more = () => {
       <li>Add <b>Get Dates from Input</b> using that <b>Dictionary Value</b>.</li>
       <li>Add <b>Get Dictionary Value</b> → <b>Value</b> for key <b>minutes</b>. ⚠️ Shortcuts fills in the wrong input here: tap it → <b>Select Variable</b> → tap the <b>Dictionary</b> from step 3.</li>
       ${s.bodyWeight ? '<li>Add <b>Get Dictionary Value</b> → <b>Value</b> for key <b>kcal</b>. Same fix: tap its input → <b>Select Variable</b> → tap the <b>Dictionary</b> from step 3.</li>' : ''}
-      <li>Add <b>Log Workout</b> (Health), set it to <b>Traditional Strength Training</b>, then tap <b>›</b> to expand it. Using <b>Select Variable</b> each time, set <b>Start Date</b> → <b>Dates</b>, <b>Duration</b> → the <b>minutes</b> step's value (unit: minutes)${s.bodyWeight ? ', <b>Active Energy</b> → the <b>kcal</b> step\'s value' : ''}.</li>
+      <li>Add <b>Log Workout</b> (Health), set it to <b>Traditional Strength Training</b>, then tap <b>›</b> to expand it. Using <b>Select Variable</b> each time, set <b>Start Date</b> → <b>Dates</b>, <b>Duration</b> → the <b>minutes</b> step's value (unit: minutes)${s.bodyWeight ? ', <b>Active Energy</b> → the <b>kcal</b> step\'s value' : ''}. ⚠️ Set <b>Distance</b> to <b>0</b> — if it's left blank the shortcut fails with a vague “problem running the shortcut” error.</li>
       <li>Back here, open a workout in History → <b>❤️ Log to Apple Health</b>, and tap <b>Allow</b> when it asks for Health access.</li>
     </ol>
     <p class="muted small">Tip: several steps output “Dictionary Value”. Always use <b>Select Variable</b> and tap the exact step instead of picking from the suggestion bar.</p></details>
